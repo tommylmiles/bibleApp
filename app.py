@@ -7,7 +7,7 @@ import re
 app = Flask(__name__)
 
 # Load BBE Bible JSON
-with open("en_bbe.json", "r", encoding="utf-8") as f:
+with open("en_bbe.json", "r", encoding="utf-8-sig") as f:
     bible_data = json.load(f)
 
 STOP_WORDS = {
