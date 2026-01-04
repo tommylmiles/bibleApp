@@ -6,11 +6,10 @@ import re
 
 app = Flask(__name__)
 
-# Load BBE Bible JSON once at startup
+# Load BBE Bible JSON
 with open("en_bbe.json", "r", encoding="utf-8") as f:
-    bbe_data = json.load(f)
+    bible_data = json.load(f)
 
-# Words to ignore
 STOP_WORDS = {
     "i", "am", "is", "are", "the", "a", "an", "and", "or",
     "to", "of", "in", "on", "for", "with", "that", "this",
@@ -18,17 +17,21 @@ STOP_WORDS = {
 }
 
 def extract_keywords(message):
-    """Extract meaningful words from a message"""
     words = re.findall(r"\b[a-z]+\b", message.lower())
     return [word for word in words if word not in STOP_WORDS]
 
 def find_verses(keywords):
-    """Search the BBE JSON for verses containing any of the keywords"""
     matches = []
 
-    for book, chapters in bbe_data.items():
+    for book, chapters in bible_data.items():
+        if not isinstance(chapters, dict):
+            continue
         for chapter_num, verses in chapters.items():
+            if not isinstance(verses, dict):
+                continue
             for verse_num, verse_text in verses.items():
+                if not isinstance(verse_text, str):
+                    continue
                 verse_text_lower = verse_text.lower()
                 if any(word in verse_text_lower for word in keywords):
                     matches.append(f"{book} {chapter_num}:{verse_num} - {verse_text.strip()}")
