@@ -12,7 +12,7 @@ def get_bible_verse(query):
     """
     response = requests.get(
         f"{BIBLE_API_URL}{query}",
-        params={"translation": "kjv"}
+        params={"translation": "bbe"}
     )
 
     if response.status_code != 200:
