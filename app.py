@@ -1,47 +1,57 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 import requests
+import re
 
 app = Flask(__name__)
 
 BIBLE_API_URL = "https://bible-api.com/"
 
-def get_bible_verse(query):
-    """
-    Query Bible API using keywords from user message
-    """
-    response = requests.get(
-        f"{BIBLE_API_URL}{query}",
-        params={"translation": "bbe"}
-    )
+STOP_WORDS = {
+    "i", "am", "is", "are", "the", "a", "an", "and", "or",
+    "to", "of", "in", "on", "for", "with", "that", "this",
+    "today", "very", "feeling", "feel", "my", "me"
+}
 
-    if response.status_code != 200:
-        return None
+def extract_keywords(message):
+    words = re.findall(r"\b[a-z]+\b", message.lower())
+    return [word for word in words if word not in STOP_WORDS]
 
-    data = response.json()
+def get_bible_verse(keywords):
+    for word in keywords:
+        response = requests.get(
+            BIBLE_API_URL,
+            params={
+                "search": word,
+                "translation": "kjv"
+            }
+        )
 
-    if "verses" not in data or not data["verses"]:
-        return None
-
-    verse = data["verses"][0]
-    return f'{verse["book_name"]} {verse["chapter"]}:{verse["verse"]} - {verse["text"].strip()}'
+        if response.status_code == 200:
+            data = response.json()
+            if "verses" in data and data["verses"]:
+                verse = data["verses"][0]
+                return (
+                    f'{verse["book_name"]} '
+                    f'{verse["chapter"]}:{verse["verse"]} - '
+                    f'{verse["text"].strip()}'
+                )
+    return None
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
-    incoming_msg = request.values.get("Body", "").lower()
+    incoming_msg = request.values.get("Body", "")
     response = MessagingResponse()
 
-    # Clean input for API search
-    search_query = incoming_msg.replace(" ", "+")
-
-    verse = get_bible_verse(search_query)
+    keywords = extract_keywords(incoming_msg)
+    verse = get_bible_verse(keywords)
 
     if verse:
         response.message(verse)
     else:
         response.message(
-            "I couldn’t find a verse matching that message. "
-            "Try words like *hope*, *fear*, *love*, or *strength*."
+            "I couldn’t find a verse for that message. "
+            "Try words like hope, fear, love, or strength."
         )
 
     return str(response)
