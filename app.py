@@ -6,7 +6,7 @@ import re
 
 app = Flask(__name__)
 
-# Load BBE Bible JSON (handle BOM + list structure)
+# Load BBE JSON (handle UTF-8 BOM)
 with open("en_bbe.json", "r", encoding="utf-8-sig") as f:
     bible_data = json.load(f)
 
@@ -24,20 +24,20 @@ def find_verses(keywords):
     matches = []
 
     for book_entry in bible_data:
-        book_name = book_entry.get("book")
-        chapters = book_entry.get("chapters")
+        book_name = book_entry.get("name")
+        chapters = book_entry.get("chapters", [])
         if not chapters:
             continue
 
-        for chapter_num, verses in chapters.items():
-            if not isinstance(verses, dict):
+        for chapter_index, verses in enumerate(chapters, start=1):
+            if not isinstance(verses, list):
                 continue
-            for verse_num, verse_text in verses.items():
+            for verse_index, verse_text in enumerate(verses, start=1):
                 if not isinstance(verse_text, str):
                     continue
                 verse_text_lower = verse_text.lower()
                 if any(word in verse_text_lower for word in keywords):
-                    matches.append(f"{book_name} {chapter_num}:{verse_num} - {verse_text.strip()}")
+                    matches.append(f"{book_name} {chapter_index}:{verse_index} - {verse_text.strip()}")
 
     return matches
 
